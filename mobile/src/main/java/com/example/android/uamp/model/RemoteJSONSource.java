@@ -20,7 +20,6 @@ import android.support.v4.media.MediaMetadataCompat;
 
 import com.example.android.uamp.utils.LogHelper;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -77,7 +76,9 @@ public class RemoteJSONSource implements MusicProviderSource {
         String id = json.getString(JSON_ID);
         String title = json.getString(JSON_TITLE);
         String album = json.getString(JSON_ALBUM);
+        String albumId = json.getString(JSON_ALBUM_ID);
         String artist = json.getString(JSON_ARTIST);
+        String artistId = json.getString(JSON_ARTIST_ID);
         String source = json.getString(JSON_SOURCE);
         String iconUrl = json.getString(JSON_IMAGE);
         int trackNumber = json.getInt(JSON_TRACK_NUMBER);
@@ -95,8 +96,9 @@ public class RemoteJSONSource implements MusicProviderSource {
                 .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
                 .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, source)
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+                .putString(MusicProviderSource.CUSTOM_METADATA_ALBUM_ID, albumId)
                 .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
+                .putString(MusicProviderSource.CUSTOM_METADATA_ARTIST_ID, artistId)
                 .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
                 .putString(MediaMetadataCompat.METADATA_KEY_GENRE, "Rock")
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, iconUrl)

@@ -58,7 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_EMPTY_ROOT;
-import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ARTIST;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ROOT;
 
 /**
@@ -333,7 +333,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
             // on onLoadChildren, handle it accordingly.
         }
 
-        return new BrowserRoot(MEDIA_ID_ROOT, null);
+        return new BrowserRoot(MEDIA_ID_MUSICS_BY_ARTIST, null);
     }
 
     @Override
