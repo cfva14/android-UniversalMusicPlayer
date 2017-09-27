@@ -17,6 +17,7 @@
 package com.example.android.uamp.model;
 
 import android.support.v4.media.MediaMetadataCompat;
+import android.util.Log;
 
 import com.example.android.uamp.utils.LogHelper;
 
@@ -39,7 +40,7 @@ public class RemoteJSONSource implements MusicProviderSource {
 
     private static final String TAG = LogHelper.makeLogTag(RemoteJSONSource.class);
 
-    protected static final String CATALOG_URL = "https://musicapp-54d43.firebaseio.com/track.json";
+    protected static final String CATALOG_URL = "https://musicapp-54d43.firebaseio.com/track.json?orderBy=\"$key\"&startAt=\"-KtoRvHuW9ryTCfewG1r\"&limitToFirst=2";
 
     private static final String JSON_ID = "id";
     private static final String JSON_TITLE = "title";
@@ -65,6 +66,7 @@ public class RemoteJSONSource implements MusicProviderSource {
                     tracks.add(buildFromJSON(innerObject));
                 }
             }
+            Log.e(TAG, tracks.size() + "");
             return tracks.iterator();
         } catch (JSONException e) {
             LogHelper.e(TAG, e, "Could not retrieve music list");
