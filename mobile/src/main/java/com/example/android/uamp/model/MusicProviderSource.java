@@ -22,5 +22,7 @@ import java.util.Iterator;
 
 public interface MusicProviderSource {
     String CUSTOM_METADATA_TRACK_SOURCE = "__SOURCE__";
+    String CUSTOM_METADATA_ALBUM_ID = "__ALBUM_ID__";
+    String CUSTOM_METADATA_ARTIST_ID = "__ARTIST_ID__";
     Iterator<MediaMetadataCompat> iterator();
 }
