@@ -45,6 +45,7 @@ public class RemoteJSONSource implements MusicProviderSource {
 
     private static final String JSON_ID = "id";
     private static final String JSON_TITLE = "title";
+    private static final String JSON_GENRE = "genre";
     private static final String JSON_ALBUM = "albumName";
     private static final String JSON_ALBUM_ID = "albumId";
     private static final String JSON_ARTIST = "artistName";
@@ -78,6 +79,10 @@ public class RemoteJSONSource implements MusicProviderSource {
     private MediaMetadataCompat buildFromJSON(JSONObject json) throws JSONException {
         String id = json.getString(JSON_ID);
         String title = json.getString(JSON_TITLE);
+        String genre = "Unknown";
+        if (!json.isNull(JSON_GENRE)) {
+            genre = json.getString(JSON_GENRE);
+        }
         String album = json.getString(JSON_ALBUM);
         String albumId = json.getString(JSON_ALBUM_ID);
         String artist = json.getString(JSON_ARTIST);
@@ -103,7 +108,7 @@ public class RemoteJSONSource implements MusicProviderSource {
                 .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
                 .putString(MusicProviderSource.CUSTOM_METADATA_ARTIST_ID, artistId)
                 .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
-                .putString(MediaMetadataCompat.METADATA_KEY_GENRE, "Rock")
+                .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, iconUrl)
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
                 .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, trackNumber)

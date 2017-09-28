@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ALBUM;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ARTIST;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ROOT;
 import static com.example.android.uamp.utils.MediaIDHelper.createMediaID;
 
@@ -56,6 +57,7 @@ public class MusicProvider {
     // Categorized caches for music track data:
     private ConcurrentMap<String, List<MediaMetadataCompat>> mMusicListByArtist;
     private ConcurrentMap<String, List<MediaMetadataCompat>> mMusicListByAlbum;
+    private ConcurrentMap<String, List<MediaMetadataCompat>> mMusicListByGenre;
     private ConcurrentMap<String, List<String>> mAlbumListByArtist;
     private final ConcurrentMap<String, MutableMediaMetadata> mMusicListById;
 
@@ -79,6 +81,7 @@ public class MusicProvider {
         mMusicListByArtist = new ConcurrentHashMap<>();
         mMusicListByAlbum = new ConcurrentHashMap<>();
         mAlbumListByArtist = new ConcurrentHashMap<>();
+        mMusicListByGenre = new ConcurrentHashMap<>();
         mMusicListById = new ConcurrentHashMap<>();
         mFavoriteTracks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     }
@@ -93,6 +96,18 @@ public class MusicProvider {
             return Collections.emptyList();
         }
         return mMusicListByArtist.keySet();
+    }
+
+    /**
+     * Get an iterator over the list of artists
+     *
+     * @return artists
+     */
+    public Iterable<String> getGenres() {
+        if (mCurrentState != State.INITIALIZED) {
+            return Collections.emptyList();
+        }
+        return mMusicListByGenre.keySet();
     }
 
     /**
@@ -142,6 +157,17 @@ public class MusicProvider {
             return Collections.emptyList();
         }
         return mMusicListByAlbum.get(album);
+    }
+
+    /**
+     * Get music tracks of the given genre
+     *
+     */
+    public List<MediaMetadataCompat> getMusicsByGenre(String genre) {
+        if (mCurrentState != State.INITIALIZED || !mMusicListByGenre.containsKey(genre)) {
+            return Collections.emptyList();
+        }
+        return mMusicListByGenre.get(genre);
     }
 
     /**
@@ -297,6 +323,21 @@ public class MusicProvider {
         mMusicListByAlbum = newMusicListByAlbum;
     }
 
+    private synchronized void buildListsByGenre() {
+        ConcurrentMap<String, List<MediaMetadataCompat>> newMusicListByGenre = new ConcurrentHashMap<>();
+
+        for (MutableMediaMetadata m : mMusicListById.values()) {
+            String genre = m.metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE);
+            List<MediaMetadataCompat> list = newMusicListByGenre.get(genre);
+            if (list == null) {
+                list = new ArrayList<>();
+                newMusicListByGenre.put(genre, list);
+            }
+            list.add(m.metadata);
+        }
+        mMusicListByGenre = newMusicListByGenre;
+    }
+
     private synchronized void buildAlbumListByArtist() {
         ConcurrentMap<String, List<String>> newAlbumListByArtist = new ConcurrentHashMap<>();
         for (MutableMediaMetadata m : mMusicListById.values()) {
@@ -327,6 +368,7 @@ public class MusicProvider {
                 buildListsByArtist();
                 buildListsByAlbum();
                 buildAlbumListByArtist();
+                buildListsByGenre();
                 mCurrentState = State.INITIALIZED;
             }
         } finally {
@@ -347,11 +389,17 @@ public class MusicProvider {
         }
 
         if (MEDIA_ID_ROOT.equals(mediaId)) {
-            mediaItems.add(createBrowsableMediaItemForRoot(resources));
+            mediaItems.add(createBrowsableMediaItemForRoot(MEDIA_ID_MUSICS_BY_ARTIST, resources));
+            mediaItems.add(createBrowsableMediaItemForRoot(MEDIA_ID_MUSICS_BY_GENRE, resources));
 
         } else if (MEDIA_ID_MUSICS_BY_ARTIST.equals(mediaId)) {
             for (String artist : getArtists()) {
                 mediaItems.add(createBrowsableMediaItemForArtist(artist, resources));
+            }
+
+        } else if (MEDIA_ID_MUSICS_BY_GENRE.equals(mediaId)) {
+            for (String genre : getGenres()) {
+                mediaItems.add(createBrowsableMediaItemForGenre(genre, resources));
             }
 
         } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_ARTIST) && mediaId.endsWith(MEDIA_ID_MUSICS_BY_ALBUM)) {
@@ -367,22 +415,38 @@ public class MusicProvider {
                 mediaItems.add(createMediaItem(metadata));
             }
 
+        } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_GENRE)) {
+            String genre = MediaIDHelper.getHierarchy(mediaId)[1];
+            for (MediaMetadataCompat metadata : getMusicsByGenre(genre)) {
+                mediaItems.add(createMediaItem(metadata));
+            }
+
         } else {
             LogHelper.w(TAG, "Skipping unmatched mediaId: ", mediaId);
         }
         return mediaItems;
     }
 
-    private MediaBrowserCompat.MediaItem createBrowsableMediaItemForRoot(Resources resources) {
+    private MediaBrowserCompat.MediaItem createBrowsableMediaItemForRoot(String mediaId, Resources resources) {
+        String title = resources.getString(R.string.browse_unknown);
+        String subTitle = resources.getString(R.string.browse_genre_subtitle);;
+        switch (mediaId) {
+            case MEDIA_ID_MUSICS_BY_ARTIST:
+                title = resources.getString(R.string.browse_artists);
+                subTitle = resources.getString(R.string.browse_artist_subtitle);
+                break;
+            case MEDIA_ID_MUSICS_BY_GENRE:
+                title = resources.getString(R.string.browse_genres);
+                subTitle = resources.getString(R.string.browse_genre_subtitle);
+                break;
+        }
         MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
-                .setMediaId(MEDIA_ID_MUSICS_BY_ARTIST)
-                .setTitle(resources.getString(R.string.browse_genres))
-                .setSubtitle(resources.getString(R.string.browse_genre_subtitle))
-                .setIconUri(Uri.parse("android.resource://" +
-                        "com.example.android.uamp/drawable/ic_by_genre"))
+                .setMediaId(mediaId)
+                .setTitle(title)
+                .setSubtitle(subTitle)
+                .setIconUri(Uri.parse("android.resource://" + "com.example.android.uamp/drawable/ic_by_genre"))
                 .build();
-        return new MediaBrowserCompat.MediaItem(description,
-                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
+        return new MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
     private MediaBrowserCompat.MediaItem createBrowsableMediaItemForArtist(String artist, Resources resources) {
@@ -391,6 +455,17 @@ public class MusicProvider {
                 .setTitle(artist)
                 .setSubtitle(resources.getString(
                         R.string.browse_musics_by_genre_subtitle, artist))
+                .build();
+        return new MediaBrowserCompat.MediaItem(description,
+                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
+    }
+
+    private MediaBrowserCompat.MediaItem createBrowsableMediaItemForGenre(String genre, Resources resources) {
+        MediaDescriptionCompat description = new MediaDescriptionCompat.Builder()
+                .setMediaId(createMediaID(null, MEDIA_ID_MUSICS_BY_GENRE, genre))
+                .setTitle(genre)
+                .setSubtitle(resources.getString(
+                        R.string.browse_musics_by_genre_subtitle, genre))
                 .build();
         return new MediaBrowserCompat.MediaItem(description,
                 MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
