@@ -40,7 +40,8 @@ public class RemoteJSONSource implements MusicProviderSource {
 
     private static final String TAG = LogHelper.makeLogTag(RemoteJSONSource.class);
 
-    protected static final String CATALOG_URL = "https://musicapp-54d43.firebaseio.com/track.json?orderBy=\"$key\"&startAt=\"-KtoRvHuW9ryTCfewG1r\"&limitToFirst=2";
+    //protected static final String CATALOG_URL = "https://musicapp-54d43.firebaseio.com/track.json?orderBy=\"$key\"&startAt=\"-KtoRvHuW9ryTCfewG1r\"&limitToFirst=2";
+    protected static final String CATALOG_URL = "https://musicapp-54d43.firebaseio.com/track.json";
 
     private static final String JSON_ID = "id";
     private static final String JSON_TITLE = "title";
@@ -57,6 +58,7 @@ public class RemoteJSONSource implements MusicProviderSource {
     public Iterator<MediaMetadataCompat> iterator() {
         try {
             JSONObject jsonObj = fetchJSONFromUrl(CATALOG_URL);
+            Log.e(TAG, jsonObj.toString().getBytes().length / 1000000f + "MB");
             ArrayList<MediaMetadataCompat> tracks = new ArrayList<>();
             if (jsonObj != null) {
                 Iterator<String> keys = jsonObj.keys();
@@ -66,7 +68,6 @@ public class RemoteJSONSource implements MusicProviderSource {
                     tracks.add(buildFromJSON(innerObject));
                 }
             }
-            Log.e(TAG, tracks.size() + "");
             return tracks.iterator();
         } catch (JSONException e) {
             LogHelper.e(TAG, e, "Could not retrieve music list");

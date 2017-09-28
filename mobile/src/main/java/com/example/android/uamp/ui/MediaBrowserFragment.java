@@ -45,6 +45,9 @@ import com.example.android.uamp.utils.NetworkHelper;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ALBUM;
+import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ARTIST;
+
 /**
  * A Fragment that lists all the various browsable queues available
  * from a {@link android.service.media.MediaBrowserService}.

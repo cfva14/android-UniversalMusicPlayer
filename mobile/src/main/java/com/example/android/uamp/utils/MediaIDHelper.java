@@ -21,6 +21,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.Arrays;
 
@@ -33,6 +34,7 @@ public class MediaIDHelper {
     public static final String MEDIA_ID_EMPTY_ROOT = "__EMPTY_ROOT__";
     public static final String MEDIA_ID_ROOT = "__ROOT__";
     public static final String MEDIA_ID_MUSICS_BY_ARTIST = "__BY_ARTIST__";
+    public static final String MEDIA_ID_MUSICS_BY_ALBUM = "__BY_ALBUM__";
     public static final String MEDIA_ID_MUSICS_BY_SEARCH = "__BY_SEARCH__";
 
     private static final char CATEGORY_SEPARATOR = '/';

@@ -333,7 +333,7 @@ public class MusicService extends MediaBrowserServiceCompat implements
             // on onLoadChildren, handle it accordingly.
         }
 
-        return new BrowserRoot(MEDIA_ID_MUSICS_BY_ARTIST, null);
+        return new BrowserRoot(MEDIA_ID_ROOT, null);
     }
 
     @Override
