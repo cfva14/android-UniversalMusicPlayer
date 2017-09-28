@@ -19,8 +19,10 @@ package com.example.android.uamp.model;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
 
+import com.example.android.uamp.MyApp;
 import com.example.android.uamp.Track;
 import com.example.android.uamp.utils.LogHelper;
+import com.example.android.uamp.utils.NetworkHelper;
 import com.example.android.uamp.utils.RealmHelper;
 
 import org.json.JSONException;
@@ -69,8 +71,12 @@ public class RemoteJSONSource implements MusicProviderSource {
             url = CATALOG_URL;
         }
         try {
-            JSONObject jsonObj = fetchJSONFromUrl(url);
-            Log.e(TAG, jsonObj.toString().getBytes().length / 1000000f + "MB");
+            JSONObject jsonObj = null;
+            if (NetworkHelper.isOnline(MyApp.getContext())) {
+                jsonObj = fetchJSONFromUrl(url);
+                Log.e(TAG, jsonObj.toString().getBytes().length / 1000000f + "MB");
+            }
+
             ArrayList<MediaMetadataCompat> tracks = new ArrayList<>();
             if (jsonObj != null) {
                 Iterator<String> keys = jsonObj.keys();

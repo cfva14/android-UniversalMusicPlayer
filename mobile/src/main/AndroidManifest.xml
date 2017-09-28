@@ -37,7 +37,8 @@
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/UAmpAppTheme"
-        android:banner="@drawable/banner_tv">
+        android:banner="@drawable/banner_tv"
+        android:name=".MyApp">
 
         <meta-data
             android:name="com.google.android.gms.car.application"
