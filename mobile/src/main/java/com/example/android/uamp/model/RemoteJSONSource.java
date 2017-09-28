@@ -19,7 +19,9 @@ package com.example.android.uamp.model;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
 
+import com.example.android.uamp.Track;
 import com.example.android.uamp.utils.LogHelper;
+import com.example.android.uamp.utils.RealmHelper;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -47,18 +49,27 @@ public class RemoteJSONSource implements MusicProviderSource {
     private static final String JSON_TITLE = "title";
     private static final String JSON_GENRE = "genre";
     private static final String JSON_ALBUM = "albumName";
+    private static final String JSON_ALBUM_IMAGE = "albumImageUrl";
     private static final String JSON_ALBUM_ID = "albumId";
     private static final String JSON_ARTIST = "artistName";
+    private static final String JSON_ARTIST_IMAGE = "artistImageUrl";
     private static final String JSON_ARTIST_ID = "artistId";
     private static final String JSON_SOURCE = "source";
-    private static final String JSON_IMAGE = "albumImageUrl";
     private static final String JSON_TRACK_NUMBER = "trackNumber";
     private static final String JSON_DURATION = "duration";
 
     @Override
     public Iterator<MediaMetadataCompat> iterator() {
+        RealmHelper<Track> realmHelper = new RealmHelper<>(Track.class);
+        Track track = realmHelper.getUnmanagedLastRecord();
+        String url;
+        if (track != null) {
+            url = "https://musicapp-54d43.firebaseio.com/track.json?orderBy=\"$key\"&startAt=\"" + track.getId() + "\"";
+        } else {
+            url = CATALOG_URL;
+        }
         try {
-            JSONObject jsonObj = fetchJSONFromUrl(CATALOG_URL);
+            JSONObject jsonObj = fetchJSONFromUrl(url);
             Log.e(TAG, jsonObj.toString().getBytes().length / 1000000f + "MB");
             ArrayList<MediaMetadataCompat> tracks = new ArrayList<>();
             if (jsonObj != null) {
@@ -66,7 +77,12 @@ public class RemoteJSONSource implements MusicProviderSource {
                 while (keys.hasNext()) {
                     String key = keys.next();
                     JSONObject innerObject = jsonObj.getJSONObject(key);
-                    tracks.add(buildFromJSON(innerObject));
+                    saveToRealm(innerObject);
+                }
+
+                RealmHelper<Track> storedTracks = new RealmHelper<>(Track.class);
+                for(Track storedTrack : storedTracks.getUnmanagedData()) {
+                    tracks.add(buildFromRealm(storedTrack));
                 }
             }
             return tracks.iterator();
@@ -76,7 +92,7 @@ public class RemoteJSONSource implements MusicProviderSource {
         }
     }
 
-    private MediaMetadataCompat buildFromJSON(JSONObject json) throws JSONException {
+    private void saveToRealm(JSONObject json) throws JSONException {
         String id = json.getString(JSON_ID);
         String title = json.getString(JSON_TITLE);
         String genre = "Unknown";
@@ -84,34 +100,36 @@ public class RemoteJSONSource implements MusicProviderSource {
             genre = json.getString(JSON_GENRE);
         }
         String album = json.getString(JSON_ALBUM);
+        String albumImageUrl = json.getString(JSON_ALBUM_IMAGE);
         String albumId = json.getString(JSON_ALBUM_ID);
         String artist = json.getString(JSON_ARTIST);
+        String artistImageUrl = "Unknown";
+        if (!json.isNull(JSON_ARTIST_IMAGE)) {
+            json.getString(JSON_ARTIST_IMAGE);
+        }
         String artistId = json.getString(JSON_ARTIST_ID);
         String source = json.getString(JSON_SOURCE);
-        String iconUrl = json.getString(JSON_IMAGE);
         int trackNumber = json.getInt(JSON_TRACK_NUMBER);
         int duration = json.getInt(JSON_DURATION) * 1000; // ms
 
-        LogHelper.d(TAG, "Found music track: ", json);
+        Track track = new Track(albumId, albumImageUrl, album, artistId, artistImageUrl, artist, duration, id, source, title, trackNumber, genre, null);
+        RealmHelper<Track> realmHelper = new RealmHelper<>(Track.class);
+        realmHelper.storeData(track);
+    }
 
-
-        // Adding the music source to the MediaMetadata (and consequently using it in the
-        // mediaSession.setMetadata) is not a good idea for a real world music app, because
-        // the session metadata can be accessed by notification listeners. This is done in this
-        // sample for convenience only.
-        //noinspection ResourceType
+    private MediaMetadataCompat buildFromRealm(Track track) throws JSONException {
         return new MediaMetadataCompat.Builder()
-                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
-                .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, source)
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
-                .putString(MusicProviderSource.CUSTOM_METADATA_ALBUM_ID, albumId)
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
-                .putString(MusicProviderSource.CUSTOM_METADATA_ARTIST_ID, artistId)
-                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
-                .putString(MediaMetadataCompat.METADATA_KEY_GENRE, genre)
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, iconUrl)
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
-                .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, trackNumber)
+                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, track.getId())
+                .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, track.getSource())
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, track.getAlbumName())
+                .putString(MusicProviderSource.CUSTOM_METADATA_ALBUM_ID, track.getAlbumId())
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, track.getArtistName())
+                .putString(MusicProviderSource.CUSTOM_METADATA_ARTIST_ID, track.getArtistId())
+                .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, track.getDuration())
+                .putString(MediaMetadataCompat.METADATA_KEY_GENRE, track.getGenre())
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, track.getAlbumImageUrl())
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, track.getTitle())
+                .putLong(MediaMetadataCompat.METADATA_KEY_TRACK_NUMBER, track.getTrackNumber())
                 .putLong(MediaMetadataCompat.METADATA_KEY_NUM_TRACKS, 10)
                 .build();
     }
