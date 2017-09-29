@@ -85,12 +85,13 @@ public class RemoteJSONSource implements MusicProviderSource {
                     JSONObject innerObject = jsonObj.getJSONObject(key);
                     saveToRealm(innerObject);
                 }
-
-                RealmHelper<Track> storedTracks = new RealmHelper<>(Track.class);
-                for(Track storedTrack : storedTracks.getUnmanagedData()) {
-                    tracks.add(buildFromRealm(storedTrack));
-                }
             }
+
+            RealmHelper<Track> storedTracks = new RealmHelper<>(Track.class);
+            for(Track storedTrack : storedTracks.getUnmanagedData()) {
+                tracks.add(buildFromRealm(storedTrack));
+            }
+
             return tracks.iterator();
         } catch (JSONException e) {
             LogHelper.e(TAG, e, "Could not retrieve music list");

@@ -22,15 +22,19 @@ import android.content.IntentFilter;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
+import android.util.Log;
+import android.widget.Toast;
 
 import com.example.android.uamp.MusicService;
 import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.model.MusicProviderSource;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
+import com.example.android.uamp.utils.NetworkHelper;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -49,6 +53,15 @@ import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.net.URLConnection;
 
 import static android.support.v4.media.session.MediaSessionCompat.QueueItem;
 import static com.google.android.exoplayer2.C.CONTENT_TYPE_MUSIC;
@@ -202,9 +215,17 @@ public final class LocalPlayback implements Playback {
                                     item.getDescription().getMediaId()));
 
             String source = track.getString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE);
+
             if (source != null) {
                 source = source.replaceAll(" ", "%20"); // Escape spaces for URLs
             }
+
+            File file = new File(mContext.getFilesDir(), track.getDescription().getMediaId());
+            if (file.exists()) {
+                source = file.getAbsolutePath();
+            }
+
+            new DownloadFileFromURL().execute(track.getDescription().getMediaId(), source);
 
             if (mExoPlayer == null) {
                 mExoPlayer =
@@ -476,6 +497,54 @@ public final class LocalPlayback implements Playback {
         @Override
         public void onRepeatModeChanged(int repeatMode) {
             // Nothing to do.
+        }
+    }
+
+    class DownloadFileFromURL extends AsyncTask<String, String, String> {
+        @Override
+        protected String doInBackground(String... strings) {
+            int count;
+            try {
+                String root = mContext.getFilesDir().toString();
+                File file = new File(root, strings[0]);
+                if (!file.exists()) {
+
+                    URL url = new URL(strings[1]);
+
+                    URLConnection conection = url.openConnection();
+                    conection.connect();
+                    // getting file length
+                    int lenghtOfFile = conection.getContentLength();
+
+                    // input stream to read file - with 8k buffer
+                    InputStream input = new BufferedInputStream(url.openStream(), 8192);
+
+                    // Output stream to write file
+
+                    OutputStream output = new FileOutputStream(file);
+                    byte data[] = new byte[1024];
+
+                    long total = 0;
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+
+                        // writing data to file
+                        output.write(data, 0, count);
+
+                    }
+
+                    // flushing output
+                    output.flush();
+
+                    // closing streams
+                    output.close();
+                    input.close();
+                }
+            } catch (Exception e) {
+                Log.e("Error: ", e.getMessage());
+            }
+
+            return null;
         }
     }
 }

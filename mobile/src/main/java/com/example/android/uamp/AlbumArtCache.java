@@ -17,13 +17,24 @@
 package com.example.android.uamp;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.util.LruCache;
 
+import com.example.android.uamp.playback.LocalPlayback;
 import com.example.android.uamp.utils.BitmapHelper;
 import com.example.android.uamp.utils.LogHelper;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.net.URLConnection;
 
 /**
  * Implements a basic cache of album arts, with async loading support.
@@ -88,24 +99,31 @@ public final class AlbumArtCache {
             listener.onFetched(artUrl, bitmap[BIG_BITMAP_INDEX], bitmap[ICON_BITMAP_INDEX]);
             return;
         }
+
+
+
         LogHelper.d(TAG, "getOrFetch: starting asynctask to fetch ", artUrl);
 
         new AsyncTask<Void, Void, Bitmap[]>() {
             @Override
             protected Bitmap[] doInBackground(Void[] objects) {
                 Bitmap[] bitmaps;
+                File file = new File(MyApp.getContext().getFilesDir(), artUrl.split("albums%2F")[1].substring(0, 20));
                 try {
-                    Bitmap bitmap = BitmapHelper.fetchAndRescaleBitmap(artUrl,
-                        MAX_ART_WIDTH, MAX_ART_HEIGHT);
-                    Bitmap icon = BitmapHelper.scaleBitmap(bitmap,
-                        MAX_ART_WIDTH_ICON, MAX_ART_HEIGHT_ICON);
+                    Bitmap bitmap;
+                    if (file.exists()) {
+                        bitmap = BitmapFactory.decodeStream(new FileInputStream(file));
+                    } else {
+                        bitmap = BitmapHelper.fetchAndRescaleBitmap(artUrl, MAX_ART_WIDTH, MAX_ART_HEIGHT);
+                    }
+                    Bitmap icon = BitmapHelper.scaleBitmap(bitmap, MAX_ART_WIDTH_ICON, MAX_ART_HEIGHT_ICON);
                     bitmaps = new Bitmap[] {bitmap, icon};
                     mCache.put(artUrl, bitmaps);
+
                 } catch (IOException e) {
                     return null;
                 }
-                LogHelper.d(TAG, "doInBackground: putting bitmap in cache. cache size=" +
-                    mCache.size());
+                LogHelper.d(TAG, "doInBackground: putting bitmap in cache. cache size=" + mCache.size());
                 return bitmaps;
             }
 
@@ -115,10 +133,60 @@ public final class AlbumArtCache {
                     listener.onError(artUrl, new IllegalArgumentException("got null bitmaps"));
                 } else {
                     listener.onFetched(artUrl,
-                        bitmaps[BIG_BITMAP_INDEX], bitmaps[ICON_BITMAP_INDEX]);
+                            bitmaps[BIG_BITMAP_INDEX], bitmaps[ICON_BITMAP_INDEX]);
                 }
             }
         }.execute();
+
+        new DownloadFileFromURL().execute(artUrl.split("albums%2F")[1].substring(0, 20), artUrl);
+    }
+
+    class DownloadFileFromURL extends AsyncTask<String, String, String> {
+        @Override
+        protected String doInBackground(String... strings) {
+            int count;
+            try {
+                String root = MyApp.getContext().getFilesDir().getAbsolutePath();
+                File file = new File(root, strings[0]);
+                if (!file.exists()) {
+
+                    URL url = new URL(strings[1]);
+
+                    URLConnection conection = url.openConnection();
+                    conection.connect();
+                    // getting file length
+                    int lenghtOfFile = conection.getContentLength();
+
+                    // input stream to read file - with 8k buffer
+                    InputStream input = new BufferedInputStream(url.openStream(), 8192);
+
+                    // Output stream to write file
+
+                    OutputStream output = new FileOutputStream(file);
+                    byte data[] = new byte[1024];
+
+                    long total = 0;
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+
+                        // writing data to file
+                        output.write(data, 0, count);
+
+                    }
+
+                    // flushing output
+                    output.flush();
+
+                    // closing streams
+                    output.close();
+                    input.close();
+                }
+            } catch (Exception e) {
+                Log.e("Error: ", e.getMessage());
+            }
+
+            return null;
+        }
     }
 
     public static abstract class FetchListener {

@@ -24,9 +24,13 @@ import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.example.android.uamp.R;
 import com.example.android.uamp.utils.LogHelper;
+import com.example.android.uamp.utils.NetworkHelper;
+
+import java.io.File;
 
 /**
  * Main activity for the music player.
@@ -83,8 +87,11 @@ public class MusicPlayerActivity extends BaseActivity
     public void onMediaItemSelected(MediaBrowserCompat.MediaItem item) {
         LogHelper.d(TAG, "onMediaItemSelected, mediaId=" + item.getMediaId());
         if (item.isPlayable()) {
-            MediaControllerCompat.getMediaController(MusicPlayerActivity.this).getTransportControls()
-                    .playFromMediaId(item.getMediaId(), null);
+            if (NetworkHelper.isOnline(MusicPlayerActivity.this)) {
+                MediaControllerCompat.getMediaController(MusicPlayerActivity.this).getTransportControls().playFromMediaId(item.getMediaId(), null);
+            } else {
+                Toast.makeText(MusicPlayerActivity.this, "You don't have internet connection, please use the offline section to play all your available songs.", Toast.LENGTH_SHORT).show();
+            }
         } else if (item.isBrowsable()) {
             navigateToBrowser(item.getMediaId());
         } else {
