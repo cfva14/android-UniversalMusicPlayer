@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
+import android.util.Log;
 
 import com.example.android.uamp.AlbumArtCache;
 import com.example.android.uamp.R;
@@ -110,7 +111,7 @@ public class QueueManager {
             return false;
         }
         mCurrentIndex = index;
-        return true;
+        return index == 0;
     }
 
     public boolean setQueueFromSearch(String query, Bundle extras) {

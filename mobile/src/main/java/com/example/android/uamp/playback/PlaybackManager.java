@@ -23,12 +23,18 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.util.Log;
+import android.widget.Toast;
 
+import com.example.android.uamp.MyApp;
 import com.example.android.uamp.R;
 import com.example.android.uamp.model.MusicProvider;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
+import com.example.android.uamp.utils.NetworkHelper;
 import com.example.android.uamp.utils.WearHelper;
+
+import java.io.File;
 
 /**
  * Manage the interactions among the container service, the queue manager and the actual playback.
@@ -72,9 +78,17 @@ public class PlaybackManager implements Playback.Callback {
     public void handlePlayRequest() {
         LogHelper.d(TAG, "handlePlayRequest: mState=" + mPlayback.getState());
         MediaSessionCompat.QueueItem currentMusic = mQueueManager.getCurrentMusic();
-        if (currentMusic != null) {
+
+        File file = new File(MyApp.getContext().getFilesDir(), currentMusic.getDescription().getMediaId().substring(currentMusic.getDescription().getMediaId().length() -20));
+        if (file.exists() || NetworkHelper.isOnline(MyApp.getContext())) {
             mServiceCallback.onPlaybackStart();
             mPlayback.play(currentMusic);
+        } else {
+            Toast.makeText(MyApp.getContext(), "Unable to Play, skipping", Toast.LENGTH_SHORT).show();
+            if (!mQueueManager.skipQueuePosition(1)) {
+                mQueueManager.updateMetadata();
+                handlePlayRequest();
+            }
         }
     }
 

@@ -87,11 +87,7 @@ public class MusicPlayerActivity extends BaseActivity
     public void onMediaItemSelected(MediaBrowserCompat.MediaItem item) {
         LogHelper.d(TAG, "onMediaItemSelected, mediaId=" + item.getMediaId());
         if (item.isPlayable()) {
-            if (NetworkHelper.isOnline(MusicPlayerActivity.this)) {
-                MediaControllerCompat.getMediaController(MusicPlayerActivity.this).getTransportControls().playFromMediaId(item.getMediaId(), null);
-            } else {
-                Toast.makeText(MusicPlayerActivity.this, "You don't have internet connection, please use the offline section to play all your available songs.", Toast.LENGTH_SHORT).show();
-            }
+            MediaControllerCompat.getMediaController(MusicPlayerActivity.this).getTransportControls().playFromMediaId(item.getMediaId(), null);
         } else if (item.isBrowsable()) {
             navigateToBrowser(item.getMediaId());
         } else {
