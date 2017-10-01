@@ -25,10 +25,12 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.util.Log;
 
+import com.example.android.uamp.MyApp;
 import com.example.android.uamp.R;
 import com.example.android.uamp.utils.LogHelper;
 import com.example.android.uamp.utils.MediaIDHelper;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -38,12 +40,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import io.realm.Realm;
-
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ALBUM;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_ARTIST;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_MUSICS_BY_GENRE;
 import static com.example.android.uamp.utils.MediaIDHelper.MEDIA_ID_ROOT;
+import static com.example.android.uamp.utils.MediaIDHelper.OFFLINE;
 import static com.example.android.uamp.utils.MediaIDHelper.createMediaID;
 
 /**
@@ -62,6 +63,12 @@ public class MusicProvider {
     private ConcurrentMap<String, List<MediaMetadataCompat>> mMusicListByGenre;
     private ConcurrentMap<String, List<String>> mAlbumListByArtist;
     private final ConcurrentMap<String, MutableMediaMetadata> mMusicListById;
+
+    private ConcurrentMap<String, List<MediaMetadataCompat>> mOfflineMusicListByArtist;
+    private ConcurrentMap<String, List<MediaMetadataCompat>> mOfflineMusicListByAlbum;
+    private ConcurrentMap<String, List<MediaMetadataCompat>> mOfflineMusicListByGenre;
+    private ConcurrentMap<String, List<String>> mOfflineAlbumListByArtist;
+    private final ConcurrentMap<String, MutableMediaMetadata> mOfflineMusicListById;
 
     private final Set<String> mFavoriteTracks;
 
@@ -85,6 +92,13 @@ public class MusicProvider {
         mAlbumListByArtist = new ConcurrentHashMap<>();
         mMusicListByGenre = new ConcurrentHashMap<>();
         mMusicListById = new ConcurrentHashMap<>();
+
+        mOfflineMusicListByArtist = new ConcurrentHashMap<>();
+        mOfflineMusicListByAlbum = new ConcurrentHashMap<>();
+        mOfflineAlbumListByArtist = new ConcurrentHashMap<>();
+        mOfflineMusicListByGenre = new ConcurrentHashMap<>();
+        mOfflineMusicListById = new ConcurrentHashMap<>();
+
         mFavoriteTracks = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     }
 
@@ -93,35 +107,84 @@ public class MusicProvider {
      *
      * @return artists
      */
-    public Iterable<String> getArtists() {
+    public Iterable<String> getArtists(boolean offline) {
         if (mCurrentState != State.INITIALIZED) {
             return Collections.emptyList();
         }
-        return mMusicListByArtist.keySet();
+        if (offline) {
+            return mOfflineMusicListByArtist.keySet();
+        } else {
+            return mMusicListByArtist.keySet();
+        }
+
     }
 
     /**
-     * Get an iterator over the list of artists
+     * Get an iterator over the list of offline artists
      *
      * @return artists
      */
-    public Iterable<String> getGenres() {
+    public Iterable<String> getOfflineArtists() {
         if (mCurrentState != State.INITIALIZED) {
             return Collections.emptyList();
         }
-        return mMusicListByGenre.keySet();
+        return mOfflineMusicListByArtist.keySet();
     }
 
     /**
-     * Get an iterator over the list of artists
+     * Get an iterator over the list of genres
      *
-     * @return genres
+     * @return artists
      */
-    public Iterable<String> getAlbumsByArtist(String artist) {
+    public Iterable<String> getGenres(boolean offline) {
         if (mCurrentState != State.INITIALIZED) {
             return Collections.emptyList();
         }
-        return mAlbumListByArtist.get(artist);
+        if (offline) {
+            return mOfflineMusicListByGenre.keySet();
+        } else {
+            return mMusicListByGenre.keySet();
+        }
+    }
+
+    /**
+     * Get an iterator over the list of offline genres
+     *
+     * @return artists
+     */
+    public Iterable<String> getOfflineGenres() {
+        if (mCurrentState != State.INITIALIZED) {
+            return Collections.emptyList();
+        }
+        return mOfflineMusicListByGenre.keySet();
+    }
+
+    /**
+     * Get an iterator over the list of albums
+     *
+     * @return genres
+     */
+    public Iterable<String> getAlbumsByArtist(String artist, boolean offline) {
+        if (mCurrentState != State.INITIALIZED) {
+            return Collections.emptyList();
+        }
+        if (offline) {
+            return mOfflineAlbumListByArtist.get(artist);
+        } else {
+            return mAlbumListByArtist.get(artist);
+        }
+    }
+
+    /**
+     * Get an iterator over the list of offline albums
+     *
+     * @return genres
+     */
+    public Iterable<String> getOfflineAlbumsByArtist(String artist) {
+        if (mCurrentState != State.INITIALIZED) {
+            return Collections.emptyList();
+        }
+        return mOfflineAlbumListByArtist.get(artist);
     }
 
     /**
@@ -151,25 +214,75 @@ public class MusicProvider {
     }
 
     /**
+     * Get music tracks of the given offline artist
+     *
+     */
+    public Iterable<MediaMetadataCompat> getOfflineMusicsByArtist(String artist) {
+        if (mCurrentState != State.INITIALIZED || !mOfflineMusicListByArtist.containsKey(artist)) {
+            return Collections.emptyList();
+        }
+        return mOfflineMusicListByArtist.get(artist);
+    }
+
+    /**
      * Get music tracks of the given album
      *
      */
-    public List<MediaMetadataCompat> getMusicsByAlbum(String album) {
+    public List<MediaMetadataCompat> getMusicsByAlbum(String album, boolean offline) {
         if (mCurrentState != State.INITIALIZED || !mMusicListByAlbum.containsKey(album)) {
             return Collections.emptyList();
         }
-        return mMusicListByAlbum.get(album);
+        if (offline) {
+            return mOfflineMusicListByAlbum.get(album);
+        } else {
+            return mMusicListByAlbum.get(album);
+        }
+    }
+
+    /**
+     * Get music tracks of the given offline album
+     *
+     */
+    public List<MediaMetadataCompat> getOfflineMusicsByAlbum(String album) {
+        if (mCurrentState != State.INITIALIZED || !mOfflineMusicListByAlbum.containsKey(album)) {
+            return Collections.emptyList();
+        }
+        return mOfflineMusicListByAlbum.get(album);
+    }
+
+    public List<MediaMetadataCompat> getMusicsByTrack() {
+        List<MediaMetadataCompat> tracks = new ArrayList<>();
+        for(MutableMediaMetadata mutableMediaMetadata : mOfflineMusicListById.values()) {
+            tracks.add(mutableMediaMetadata.metadata);
+            Log.e(TAG, mutableMediaMetadata.metadata.getDescription().getTitle() + "");
+        }
+        return tracks;
     }
 
     /**
      * Get music tracks of the given genre
      *
      */
-    public List<MediaMetadataCompat> getMusicsByGenre(String genre) {
+    public List<MediaMetadataCompat> getMusicsByGenre(String genre, boolean offline) {
         if (mCurrentState != State.INITIALIZED || !mMusicListByGenre.containsKey(genre)) {
             return Collections.emptyList();
         }
-        return mMusicListByGenre.get(genre);
+        if (offline) {
+            return mOfflineMusicListByGenre.get(genre);
+        } else {
+            return mMusicListByGenre.get(genre);
+        }
+    }
+
+    /**
+     * Get music tracks of the given offline genre
+     *
+     */
+    public List<MediaMetadataCompat> getOfflineMusicsByGenre(String genre) {
+        if (mCurrentState != State.INITIALIZED || !mOfflineMusicListByGenre.containsKey(genre)) {
+            return Collections.emptyList();
+        }
+        return mOfflineMusicListByGenre.get(genre);
     }
 
     /**
@@ -222,6 +335,15 @@ public class MusicProvider {
      */
     public MediaMetadataCompat getMusic(String musicId) {
         return mMusicListById.containsKey(musicId) ? mMusicListById.get(musicId).metadata : null;
+    }
+
+    /**
+     * Return the MediaMetadataCompat for the given musicID.
+     *
+     * @param musicId The unique, non-hierarchical music ID.
+     */
+    public MediaMetadataCompat getOfflineMusic(String musicId) {
+        return mOfflineMusicListById.containsKey(musicId) ? mOfflineMusicListById.get(musicId).metadata : null;
     }
 
     public synchronized void updateMusicArt(String musicId, Bitmap albumArt, Bitmap icon) {
@@ -310,6 +432,21 @@ public class MusicProvider {
         mMusicListByArtist = newMusicListByArtist;
     }
 
+    private synchronized void buildOfflineListsByArtist() {
+        ConcurrentMap<String, List<MediaMetadataCompat>> newOfflineMusicListByArtist = new ConcurrentHashMap<>();
+
+        for (MutableMediaMetadata m : mOfflineMusicListById.values()) {
+            String artist = m.metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
+            List<MediaMetadataCompat> list = newOfflineMusicListByArtist.get(artist);
+            if (list == null) {
+                list = new ArrayList<>();
+                newOfflineMusicListByArtist.put(artist, list);
+            }
+            list.add(m.metadata);
+        }
+        mOfflineMusicListByArtist = newOfflineMusicListByArtist;
+    }
+
     private synchronized void buildListsByAlbum() {
         ConcurrentMap<String, List<MediaMetadataCompat>> newMusicListByAlbum = new ConcurrentHashMap<>();
 
@@ -325,6 +462,21 @@ public class MusicProvider {
         mMusicListByAlbum = newMusicListByAlbum;
     }
 
+    private synchronized void buildOfflineListsByAlbum() {
+        ConcurrentMap<String, List<MediaMetadataCompat>> newOfflineMusicListByAlbum = new ConcurrentHashMap<>();
+
+        for (MutableMediaMetadata m : mOfflineMusicListById.values()) {
+            String album = m.metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM);
+            List<MediaMetadataCompat> list = newOfflineMusicListByAlbum.get(album);
+            if (list == null) {
+                list = new ArrayList<>();
+                newOfflineMusicListByAlbum.put(album, list);
+            }
+            list.add(m.metadata);
+        }
+        mOfflineMusicListByAlbum = newOfflineMusicListByAlbum;
+    }
+
     private synchronized void buildListsByGenre() {
         ConcurrentMap<String, List<MediaMetadataCompat>> newMusicListByGenre = new ConcurrentHashMap<>();
 
@@ -338,6 +490,21 @@ public class MusicProvider {
             list.add(m.metadata);
         }
         mMusicListByGenre = newMusicListByGenre;
+    }
+
+    private synchronized void buildOfflineListsByGenre() {
+        ConcurrentMap<String, List<MediaMetadataCompat>> newOfflineMusicListByGenre = new ConcurrentHashMap<>();
+
+        for (MutableMediaMetadata m : mMusicListById.values()) {
+            String genre = m.metadata.getString(MediaMetadataCompat.METADATA_KEY_GENRE);
+            List<MediaMetadataCompat> list = newOfflineMusicListByGenre.get(genre);
+            if (list == null) {
+                list = new ArrayList<>();
+                newOfflineMusicListByGenre.put(genre, list);
+            }
+            list.add(m.metadata);
+        }
+        mOfflineMusicListByGenre = newOfflineMusicListByGenre;
     }
 
     private synchronized void buildAlbumListByArtist() {
@@ -356,6 +523,35 @@ public class MusicProvider {
         mAlbumListByArtist = newAlbumListByArtist;
     }
 
+    private synchronized void buildOfflineAlbumListByArtist() {
+        ConcurrentMap<String, List<String>> newOfflineAlbumListByArtist = new ConcurrentHashMap<>();
+        for (MutableMediaMetadata m : mMusicListById.values()) {
+            String artist = m.metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
+            List<String> list = newOfflineAlbumListByArtist.get(artist);
+            if (list == null) {
+                list = new ArrayList<>();
+                newOfflineAlbumListByArtist.put(artist, list);
+            }
+            if (!list.contains(m.metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM))) {
+                list.add(m.metadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM));
+            }
+        }
+        mOfflineAlbumListByArtist = newOfflineAlbumListByArtist;
+    }
+
+    public void buildOfflineLists() {
+        buildOfflineListsByArtist();
+        buildOfflineListsByAlbum();
+        buildOfflineAlbumListByArtist();
+        buildOfflineListsByGenre();
+    }
+
+    public void addTrackToOfflinePlaylist(String musicId) {
+        Log.e(TAG, musicId);
+        mOfflineMusicListById.put(musicId, mMusicListById.get(musicId));
+        buildOfflineLists();
+    }
+
     private synchronized void retrieveMedia() {
         try {
             if (mCurrentState == State.NON_INITIALIZED) {
@@ -366,11 +562,17 @@ public class MusicProvider {
                     MediaMetadataCompat item = tracks.next();
                     String musicId = item.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
                     mMusicListById.put(musicId, new MutableMediaMetadata(musicId, item));
+                    File file = new File(MyApp.getContext().getFilesDir(), musicId);
+                    if (file.exists()) {
+                        mOfflineMusicListById.put(musicId, new MutableMediaMetadata(musicId, item));
+                    }
                 }
                 buildListsByArtist();
                 buildListsByAlbum();
                 buildAlbumListByArtist();
                 buildListsByGenre();
+
+                buildOfflineLists();
                 mCurrentState = State.INITIALIZED;
             }
         } finally {
@@ -384,7 +586,12 @@ public class MusicProvider {
 
 
     public List<MediaBrowserCompat.MediaItem> getChildren(String mediaId, Resources resources) {
+        boolean offline = false;
         List<MediaBrowserCompat.MediaItem> mediaItems = new ArrayList<>();
+        if (mediaId.substring(0, 7).equals(OFFLINE)) {
+            mediaId = mediaId.substring(7, mediaId.length());
+            offline = true;
+        }
 
         if (!MediaIDHelper.isBrowseable(mediaId)) {
             return mediaItems;
@@ -395,37 +602,38 @@ public class MusicProvider {
             mediaItems.add(createBrowsableMediaItemForRoot(MEDIA_ID_MUSICS_BY_GENRE, resources));
 
         } else if (MEDIA_ID_MUSICS_BY_ARTIST.equals(mediaId)) {
-            for (String artist : getArtists()) {
+            for (String artist : getArtists(offline)) {
                 mediaItems.add(createBrowsableMediaItemForArtist(artist, resources));
             }
 
         } else if (MEDIA_ID_MUSICS_BY_GENRE.equals(mediaId)) {
-            for (String genre : getGenres()) {
+            for (String genre : getGenres(offline)) {
                 mediaItems.add(createBrowsableMediaItemForGenre(genre, resources));
             }
 
         } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_ARTIST) && mediaId.endsWith(MEDIA_ID_MUSICS_BY_ALBUM)) {
             String[] split = mediaId.split("/");
             String artist = split[1];
-            for (String album : getAlbumsByArtist(artist)) {
+            for (String album : getAlbumsByArtist(artist, offline)) {
                 mediaItems.add(createBrowsableAlbumMediaItemForArtist(artist, album, resources));
             }
 
         } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_ARTIST) && mediaId.contains(MEDIA_ID_MUSICS_BY_ARTIST) && mediaId.contains(MEDIA_ID_MUSICS_BY_ALBUM)) {
             String album = MediaIDHelper.getHierarchy(mediaId)[3];
-            for (MediaMetadataCompat metadata : getMusicsByAlbum(album)) {
+            for (MediaMetadataCompat metadata : getMusicsByAlbum(album, offline)) {
                 mediaItems.add(createMediaItem(metadata));
             }
 
         } else if (mediaId.startsWith(MEDIA_ID_MUSICS_BY_GENRE)) {
             String genre = MediaIDHelper.getHierarchy(mediaId)[1];
-            for (MediaMetadataCompat metadata : getMusicsByGenre(genre)) {
+            for (MediaMetadataCompat metadata : getMusicsByGenre(genre, offline)) {
                 mediaItems.add(createMediaItem(metadata));
             }
 
         } else {
             LogHelper.w(TAG, "Skipping unmatched mediaId: ", mediaId);
         }
+
         return mediaItems;
     }
 

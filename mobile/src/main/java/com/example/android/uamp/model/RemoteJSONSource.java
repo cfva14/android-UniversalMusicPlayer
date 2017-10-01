@@ -152,7 +152,7 @@ public class RemoteJSONSource implements MusicProviderSource {
         try {
             URLConnection urlConnection = new URL(urlString).openConnection();
             reader = new BufferedReader(new InputStreamReader(
-                    urlConnection.getInputStream(), "iso-8859-1"));
+                    urlConnection.getInputStream(), "UTF-8"));
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {

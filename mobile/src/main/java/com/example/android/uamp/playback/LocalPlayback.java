@@ -539,6 +539,10 @@ public final class LocalPlayback implements Playback {
                     // closing streams
                     output.close();
                     input.close();
+
+                    if (file.exists()) {
+                        mMusicProvider.addTrackToOfflinePlaylist(strings[0]);
+                    }
                 }
             } catch (Exception e) {
                 Log.e("Error: ", e.getMessage());

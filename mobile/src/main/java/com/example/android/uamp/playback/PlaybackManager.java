@@ -84,7 +84,6 @@ public class PlaybackManager implements Playback.Callback {
             mServiceCallback.onPlaybackStart();
             mPlayback.play(currentMusic);
         } else {
-            Toast.makeText(MyApp.getContext(), "Unable to Play, skipping", Toast.LENGTH_SHORT).show();
             if (!mQueueManager.skipQueuePosition(1)) {
                 mQueueManager.updateMetadata();
                 handlePlayRequest();
